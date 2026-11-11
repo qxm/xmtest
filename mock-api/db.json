@@ -1,7 +1,7 @@
 {
   "customer": {
     "id": "cus_001",
-    "firstName": "Ava",
+    "firstName": "Jason",
     "lastName": "Chen",
     "email": "ava.chen@example.com",
     "segment": "retail",
