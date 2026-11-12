@@ -11,6 +11,19 @@ afterEach(() => {
   document.documentElement.dataset.segment = 'retail'
 })
 describe('preferences', () => {
+  it.each([
+    ['light', 'retail'], ['light', 'premium'], ['dark', 'retail'], ['dark', 'premium'],
+  ])('keeps %s / %s controls and root attributes in sync', (theme, segment) => {
+    document.documentElement.dataset.theme = theme
+    document.documentElement.dataset.segment = segment
+    render(<PreferenceControls />)
+    expect(screen.getByRole('button', { name: 'Dark mode' })).toHaveAttribute('aria-pressed', String(theme === 'dark'))
+    expect(screen.getByRole('button', { name: 'Premium' })).toHaveAttribute('aria-pressed', String(segment === 'premium'))
+    fireEvent.click(screen.getByRole('button', { name: 'Dark mode' }))
+    expect(document.documentElement.dataset.segment).toBe(segment)
+    expect(document.documentElement.dataset.theme).toBe(theme === 'light' ? 'dark' : 'light')
+  })
+
   it('initializes saved choices before rendering, or falls back to the system when storage fails', () => {
     const dataset: Record<string, string> = {}
     const document = { documentElement: { dataset } }

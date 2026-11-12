@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { FormEvent, KeyboardEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm, useWatch } from 'react-hook-form'
 import type { FieldPath } from 'react-hook-form'
@@ -21,6 +21,7 @@ export function TransferDialog({ accounts, customer, onClose }: Props) {
   const dialog = useRef<HTMLDialogElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const sending = useRef(false)
+  const focusNewRecipient = useRef(false)
   const queryClient = useQueryClient()
   const payees = useQuery(payeesQuery)
   const [step, setStep] = useState(0)
@@ -66,13 +67,27 @@ export function TransferDialog({ accounts, customer, onClose }: Props) {
     return () => { document.body.style.overflow = previousOverflow; element?.close(); if (opener instanceof HTMLElement) opener.focus() }
   }, [])
   useEffect(() => { heading.current?.focus() }, [step, mutation.isSuccess])
+  useEffect(() => {
+    if (values.recipientMode === 'new' && focusNewRecipient.current) {
+      focusNewRecipient.current = false
+      setFocus('recipient.name')
+    }
+  }, [values.recipientMode, setFocus])
+
+  function focusField(field: FieldPath<TransferValues>) {
+    if (field === 'payeeId') {
+      const firstPayee = dialog.current?.querySelector<HTMLInputElement>('input[type="radio"]')
+      if (firstPayee) firstPayee.focus()
+      else dialog.current?.querySelector<HTMLInputElement>('#payee-search')?.focus()
+    } else setFocus(field)
+  }
 
   async function advance() {
     const fields = step === 0 ? recipientFields : amountFields
     if (await trigger(fields)) { setSendError(''); setStep(step + 1) }
     else {
       const first = fields.find(field => getFieldState(field).invalid)
-      if (first) setFocus(first)
+      if (first) focusField(first)
     }
   }
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -90,7 +105,7 @@ export function TransferDialog({ accounts, customer, onClose }: Props) {
     } finally { sending.current = false }
   }, () => {
     const first = fieldOrder.find(field => getFieldState(field).invalid)
-    if (first) { setStep(recipientFields.includes(first) ? 0 : 1); window.setTimeout(() => setFocus(first), 0) }
+    if (first) { setStep(recipientFields.includes(first) ? 0 : 1); window.setTimeout(() => focusField(first), 0) }
     })(event)
   }
   function fieldError(field: FieldPath<TransferValues>) {
@@ -100,8 +115,27 @@ export function TransferDialog({ accounts, customer, onClose }: Props) {
   function a11y(field: FieldPath<TransferValues>) {
     return { 'aria-invalid': getFieldState(field, form.formState).invalid, 'aria-describedby': getFieldState(field, form.formState).invalid ? `${field}-error` : undefined }
   }
+  function containFocus(event: KeyboardEvent<HTMLDialogElement>) {
+    if (event.key !== 'Tab') return
+    const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+    )).filter(element => {
+      const style = getComputedStyle(element)
+      return style.display !== 'none' && style.visibility !== 'hidden' && !element.hidden
+    })
+    const first = controls[0]
+    const last = controls[controls.length - 1]
+    if (!first || !last) { event.preventDefault(); heading.current?.focus(); return }
+    if (event.shiftKey && (document.activeElement === first || !controls.includes(document.activeElement as HTMLElement))) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
   const result = mutation.data?.transfer
-  return <dialog ref={dialog} className="transfer-dialog" aria-labelledby="transfer-title" onCancel={event => { event.preventDefault(); if (!busy) onClose() }}>
+  return <dialog ref={dialog} className="transfer-dialog" onKeyDown={containFocus} aria-labelledby="transfer-title" onCancel={event => { event.preventDefault(); if (!busy) onClose() }}>
     <div className="dialog-header"><h2 id="transfer-title">New transfer</h2><button type="button" className="icon-button" aria-label="Close transfer" onClick={onClose} disabled={busy}>×</button></div>
     {result ? <div className="success-panel" aria-live="polite">
       <h3 ref={heading} tabIndex={-1}>Transfer sent</h3><p className="success-amount amount">{formatMoney(result.amount)}</p>
@@ -118,7 +152,7 @@ export function TransferDialog({ accounts, customer, onClose }: Props) {
             <label htmlFor="payee-search">Search payees</label><input id="payee-search" type="search" value={search} onChange={event => setSearch(event.target.value)} />
             {payees.isPending && <p role="status">Loading recipients…</p>}
             {payees.isError && <div role="alert">We couldn't load your recipients. <button type="button" onClick={() => void payees.refetch()}>Retry recipients</button></div>}
-            <fieldset className="payee-options" aria-describedby="payeeId-error" aria-invalid={Boolean(errors.payeeId)}><legend>Recipient</legend>
+            <fieldset className="payee-options" aria-describedby={errors.payeeId ? 'payeeId-error' : undefined} aria-invalid={Boolean(errors.payeeId)}><legend>Recipient</legend>
               {(payees.data?.payees ?? []).filter(item => `${item.name} ${item.bank}`.toLowerCase().includes(search.toLowerCase())).map(item => <label className="payee-option" key={item.id}>
                 <input type="radio" {...register('payeeId')} value={item.id} checked={values.recipientMode === 'saved' && values.payeeId === item.id} onChange={event => { form.setValue('recipientMode', 'saved'); void register('payeeId').onChange(event) }} />
                 <span><strong>{item.name}</strong><small>{item.bank} · {item.accountNumberMasked}</small></span>
@@ -127,8 +161,8 @@ export function TransferDialog({ accounts, customer, onClose }: Props) {
               {payees.isSuccess && payees.data.payees.length > 0 && !payees.data.payees.some(item => `${item.name} ${item.bank}`.toLowerCase().includes(search.toLowerCase())) && <p>No recipients match your search.</p>}
             </fieldset>
             {fieldError('payeeId')}
-            <button type="button" className="secondary-button" aria-expanded={values.recipientMode === 'new'} onClick={() => form.setValue('recipientMode', values.recipientMode === 'new' ? 'saved' : 'new')}>Send to someone new</button>
-            {values.recipientMode === 'new' && <div className="new-recipient">
+            <button type="button" className="secondary-button" aria-controls="new-recipient-fields" aria-expanded={values.recipientMode === 'new'} onClick={() => { focusNewRecipient.current = values.recipientMode !== 'new'; form.setValue('recipientMode', values.recipientMode === 'new' ? 'saved' : 'new'); form.clearErrors(recipientFields) }}>Send to someone new</button>
+            {values.recipientMode === 'new' && <div className="new-recipient" id="new-recipient-fields">
               <label htmlFor="recipient-name">Recipient name</label><input id="recipient-name" autoComplete="off" {...register('recipient.name')} {...a11y('recipient.name')} />{fieldError('recipient.name')}
               <label htmlFor="recipient-number">Account number (8 digits)</label><input id="recipient-number" inputMode="numeric" autoComplete="off" {...register('recipient.accountNumber')} {...a11y('recipient.accountNumber')} />{fieldError('recipient.accountNumber')}
               <label htmlFor="recipient-bank">Bank</label><input id="recipient-bank" {...register('recipient.bank')} {...a11y('recipient.bank')} />{fieldError('recipient.bank')}

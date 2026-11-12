@@ -134,3 +134,25 @@ button:disabled { opacity: .65; }
   .transfer-button { position: fixed; bottom: var(--space-4); bottom: max(var(--space-4), env(safe-area-inset-bottom)); left: var(--gutter-mobile); right: var(--gutter-mobile); z-index: var(--z-header); background: var(--brand); color: var(--on-brand); box-shadow: var(--shadow-md); }
   .dialog-content, .success-panel { padding: var(--space-4); }
 }
+/* Keep modal controls visible while only the form body scrolls. */
+.transfer-dialog[open] { display: flex; flex-direction: column; overflow: hidden; }
+.transfer-dialog form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; margin: 0; }
+.dialog-header, .dialog-footer, .stepper { flex-shrink: 0; }
+.dialog-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-padding-block: var(--space-6); }
+.dialog-content :is(input, select, button) { scroll-margin-block: var(--space-4); }
+.dialog-footer { position: static; }
+.success-panel { overflow-y: auto; overflow-wrap: anywhere; }
+.dialog-header { padding-top: max(var(--space-4), env(safe-area-inset-top)); }
+.transfer-dialog :is(input, select) { font-size: max(1rem, var(--text-base)); }
+.payee-option:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.payee-option:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); }
+.field-error { overflow-wrap: anywhere; }
+.greeting h1, .limit-amount { overflow-wrap: anywhere; }
+@media (max-width: 639px) {
+  .dialog-header, .dialog-footer, .stepper { padding-inline: var(--gutter-mobile); }
+  .transaction-value { max-width: 48%; overflow-wrap: anywhere; text-align: right; }
+  .dialog-footer > button { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

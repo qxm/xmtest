@@ -41,6 +41,40 @@ async function goToReview(note = '') {
 const exact = (value: string) => (_: string, element: Element | null) => element?.textContent === value && !Array.from(element.children).some(child => child.textContent === value)
 
 describe('transfer', () => {
+  it('contains keyboard focus, focuses new-recipient fields, and restores scrolling on Escape', async () => {
+    const previousOverflow = document.body.style.overflow
+    const { opener, modal } = await openTransfer()
+    expect(document.body.style.overflow).toBe('hidden')
+    const close = screen.getByRole('button', { name: 'Close transfer' })
+    const next = screen.getByRole('button', { name: 'Continue' })
+    next.focus()
+    fireEvent.keyDown(modal, { key: 'Tab' })
+    expect(close).toHaveFocus()
+    fireEvent.keyDown(modal, { key: 'Tab', shiftKey: true })
+    expect(next).toHaveFocus()
+    fireEvent.click(screen.getByRole('button', { name: 'Send to someone new' }))
+    await waitFor(() => expect(screen.getByLabelText('Recipient name')).toHaveFocus())
+    fireEvent(modal, new Event('cancel', { bubbles: true, cancelable: true }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(document.body.style.overflow).toBe(previousOverflow)
+    expect(opener).toHaveFocus()
+  })
+  it('focuses a recipient after an empty selection and the search box when no payees exist', async () => {
+    await openTransfer()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await screen.findByText('Choose a recipient.')
+    expect(screen.getByRole('radio', { name: /Jamie Tan/ })).toHaveFocus()
+  })
+  it('keeps recipient validation reachable when the saved-payee list is empty', async () => {
+    server.use(http.get('*/api/payees', () => HttpResponse.json({ payees: [] })))
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: 'New transfer' }))
+    await screen.findByText('No saved recipients. Send to someone new below.')
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await screen.findByText('Choose a recipient.')
+    expect(screen.getByRole('searchbox', { name: 'Search payees' })).toHaveFocus()
+  })
+
   it('rejects an amount above balance with focus and no POST request', async () => {
     let posts = 0
     server.events.on('request:start', ({ request }) => { if (request.method === 'POST') posts++ })
@@ -130,4 +164,3 @@ describe('transfer', () => {
     expect(opener).toHaveFocus()
   })
 })
-
