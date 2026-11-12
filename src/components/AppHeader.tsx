@@ -13,6 +13,6 @@ export function AppHeader() {
     <nav aria-label="Main navigation"><a href="#main" aria-current="page">Overview</a>
       {['Cards', 'Payments', 'Insights'].map(label => <button type="button" key={label} disabled>{label}</button>)}
     </nav>
-    <PreferenceControls /><span className="avatar" aria-label={fullName}>{initials}</span>
+    <PreferenceControls defaultSegment={customer?.segment} /><span className="avatar" aria-label={fullName}>{initials}</span>
   </div></header>
 }

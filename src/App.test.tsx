@@ -17,13 +17,14 @@ describe('dashboard', () => {
   it('uses the API customer name and initials instead of fixed identity text', async () => {
     server.use(http.get('*/api/customer', () => HttpResponse.json({ customer: {
       id: 'cus_test', firstName: 'Jamie', lastName: 'Tan', email: 'jamie@example.com',
-      segment: 'retail', dailyTransferLimit: 5000, transferredToday: 0,
+      segment: 'premium', dailyTransferLimit: 5000, transferredToday: 0,
     } })))
     renderApp()
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(getGreeting())
     expect(screen.queryByText(/Good (morning|afternoon|evening), Ava/)).not.toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: /Good (morning|afternoon|evening), Jamie/ })).toBeInTheDocument()
     expect(screen.getByLabelText('Jamie Tan')).toHaveTextContent('JT')
+    expect(document.documentElement.dataset.segment).toBe('premium')
   })
 
   it('loads all three endpoints concurrently and renders deposit totals, accounts and eight transactions', async () => {

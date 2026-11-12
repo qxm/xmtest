@@ -11,11 +11,37 @@ afterEach(() => {
   document.documentElement.dataset.segment = 'retail'
 })
 describe('preferences', () => {
+  it('adopts the API default after loading without persisting it as a user choice', () => {
+    const view = render(<PreferenceControls />)
+    view.rerender(<PreferenceControls defaultSegment="premium" />)
+    expect(document.documentElement.dataset.segment).toBe('premium')
+    expect(screen.getByRole('button', { name: 'Premium' })).toHaveAttribute('aria-pressed', 'true')
+    expect(localStorage.getItem('meridian.segment')).toBeNull()
+  })
+  it('keeps a saved Retail preference over a Premium customer default', () => {
+    localStorage.setItem('meridian.segment', 'retail')
+    render(<PreferenceControls defaultSegment="premium" />)
+    expect(document.documentElement.dataset.segment).toBe('retail')
+  })
+  it('keeps a manual selection made while the customer request is pending', () => {
+    const view = render(<PreferenceControls />)
+    fireEvent.click(screen.getByRole('button', { name: 'Retail' }))
+    view.rerender(<PreferenceControls defaultSegment="premium" />)
+    expect(document.documentElement.dataset.segment).toBe('retail')
+    expect(localStorage.getItem('meridian.segment')).toBe('retail')
+  })
+  it('ignores malformed stored brand values', () => {
+    localStorage.setItem('meridian.segment', 'invalid')
+    render(<PreferenceControls defaultSegment="premium" />)
+    expect(document.documentElement.dataset.segment).toBe('premium')
+  })
+
   it.each([
     ['light', 'retail'], ['light', 'premium'], ['dark', 'retail'], ['dark', 'premium'],
   ])('keeps %s / %s controls and root attributes in sync', (theme, segment) => {
     document.documentElement.dataset.theme = theme
     document.documentElement.dataset.segment = segment
+    localStorage.setItem('meridian.segment', segment)
     render(<PreferenceControls />)
     expect(screen.getByRole('button', { name: 'Dark mode' })).toHaveAttribute('aria-pressed', String(theme === 'dark'))
     expect(screen.getByRole('button', { name: 'Premium' })).toHaveAttribute('aria-pressed', String(segment === 'premium'))

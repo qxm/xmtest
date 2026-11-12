@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { accountsQuery, customerQuery, transactionsQuery } from '../../api/queries'
-import { formatMoney } from '../../lib/format'
+import { BalanceHero } from './BalanceHero'
+import { DailyLimitPanel } from './DailyLimitPanel'
 import { Greeting } from './Greeting'
 import { AccountCards } from './AccountCards'
 import { TransactionList } from './TransactionList'
@@ -33,10 +34,10 @@ export function DashboardShell() {
       <h2 id="dashboard-error-title" role="alert">We couldn't load your dashboard.</h2>
       <button className="action-button" type="button" onClick={retry} disabled={retrying}>{retrying ? 'Retrying…' : 'Retry'}</button>
     </section> : pending ? <DashboardSkeleton /> : <div className="dashboard-grid"><div className="main-column">
-      <section className="balance-hero" aria-labelledby="balance-title"><p id="balance-title">Total available</p><p className="balance-placeholder amount">{formatMoney(total)}</p><p>Across {deposits.length} deposit accounts</p><button className="transfer-button" type="button" disabled={deposits.length === 0} onClick={() => setTransferOpen(true)}>New transfer</button></section>
+      <BalanceHero total={total} depositCount={deposits.length} onTransfer={() => setTransferOpen(true)} />
       <AccountCards accounts={accounts.data.accounts} />
       <TransactionList transactions={transactions.data.transactions} search={search} onSearchChange={setSearch} />
-    </div><aside className="panel limit-panel" aria-labelledby="limit-title"><h2 id="limit-title">Daily transfer limit</h2><p className="limit-amount amount">{formatMoney(remaining)}</p><p className="muted">remaining today</p><p className="muted">Resets daily. Applies to all transfers.</p></aside></div>}
+    </div><DailyLimitPanel remaining={remaining} /></div>}
     {transferOpen && accounts.data && customer.data && <TransferDialog accounts={accounts.data.accounts} customer={customer.data.customer} onClose={() => setTransferOpen(false)} />}
   </main>
 }
