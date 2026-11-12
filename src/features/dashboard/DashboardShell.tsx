@@ -37,7 +37,7 @@ export function DashboardShell() {
       <BalanceHero total={total} depositCount={deposits.length} onTransfer={() => setTransferOpen(true)} />
       <AccountCards accounts={accounts.data.accounts} />
       <TransactionList transactions={transactions.data.transactions} search={search} onSearchChange={setSearch} />
-    </div><DailyLimitPanel remaining={remaining} /></div>}
+    </div><DailyLimitPanel remaining={remaining} limit={customer.data.customer.dailyTransferLimit} /></div>}
     {transferOpen && accounts.data && customer.data && <TransferDialog accounts={accounts.data.accounts} customer={customer.data.customer} onClose={() => setTransferOpen(false)} />}
   </main>
 }

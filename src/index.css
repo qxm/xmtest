@@ -152,3 +152,14 @@ button:disabled { opacity: .65; }
   /* Reserve two title lines for both skeleton and real transaction descriptions. */
   .transaction-details h3 { min-height: 3em; }
 }
+/* Daily limit and draft confirmation */
+.limit-progress { display: block; appearance: none; width: 100%; height: var(--space-2); border: 0; border-radius: var(--radius-full); overflow: hidden; background: var(--surface-muted); color: var(--brand); accent-color: var(--brand); }
+.limit-progress::-webkit-progress-bar { background: var(--surface-muted); border-radius: var(--radius-full); }
+.limit-progress::-webkit-progress-value { background: var(--brand); border-radius: var(--radius-full); }
+.limit-progress::-moz-progress-bar { background: var(--brand); border-radius: var(--radius-full); }
+.limit-usage { margin-top: var(--space-3); }
+.transfer-body:not([hidden]) { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.discard-confirmation { padding: var(--space-6); overflow-y: auto; }
+.discard-confirmation h3 { font-size: var(--text-xl); margin-top: 0; }
+.discard-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-6); }
+.discard-button { padding: var(--space-2) var(--space-4); border: 1px solid var(--negative); border-radius: var(--radius-sm); background: var(--negative-soft); color: var(--negative); }

@@ -25,6 +25,9 @@ export function TransferDialog({ accounts, customer, onClose }: Props) {
   const queryClient = useQueryClient()
   const payees = useQuery(payeesQuery)
   const [step, setStep] = useState(0)
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const keepEditingButton = useRef<HTMLButtonElement>(null)
+  const closeOrigin = useRef<HTMLElement | null>(null)
   const [search, setSearch] = useState('')
   const [sendError, setSendError] = useState('')
   const [refreshError, setRefreshError] = useState(false)
@@ -82,6 +85,23 @@ export function TransferDialog({ accounts, customer, onClose }: Props) {
     } else setFocus(field)
   }
 
+  const hasDraft = Boolean(values.payeeId || values.recipientMode === 'new' || values.recipient.name ||
+    values.recipient.accountNumber || values.recipient.bank || values.amount || values.note ||
+    values.fromAccountId !== (deposits[0]?.id ?? ''))
+  function requestClose() {
+    if (busy) return
+    if (mutation.isSuccess || !hasDraft) { onClose(); return }
+    closeOrigin.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setConfirmDiscard(true)
+  }
+  useEffect(() => {
+    if (confirmDiscard) keepEditingButton.current?.focus()
+    else if (closeOrigin.current?.isConnected) {
+      closeOrigin.current.focus()
+      closeOrigin.current = null
+    }
+  }, [confirmDiscard])
+
   async function advance() {
     const fields = step === 0 ? recipientFields : amountFields
     if (await trigger(fields)) { setSendError(''); setStep(step + 1) }
@@ -121,7 +141,7 @@ export function TransferDialog({ accounts, customer, onClose }: Props) {
       'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
     )).filter(element => {
       const style = getComputedStyle(element)
-      return style.display !== 'none' && style.visibility !== 'hidden' && !element.hidden
+      return style.display !== 'none' && style.visibility !== 'hidden' && !element.hidden && !element.closest('[hidden], [inert]')
     })
     const first = controls[0]
     const last = controls[controls.length - 1]
@@ -135,8 +155,15 @@ export function TransferDialog({ accounts, customer, onClose }: Props) {
     }
   }
   const result = mutation.data?.transfer
-  return <dialog ref={dialog} className="transfer-dialog" onKeyDown={containFocus} aria-labelledby="transfer-title" onCancel={event => { event.preventDefault(); if (!busy) onClose() }}>
-    <div className="dialog-header"><h2 id="transfer-title">New transfer</h2><button type="button" className="icon-button" aria-label="Close transfer" onClick={onClose} disabled={busy}>×</button></div>
+  return <dialog ref={dialog} className="transfer-dialog" onKeyDown={containFocus} aria-labelledby="transfer-title" onCancel={event => { event.preventDefault(); if (confirmDiscard) setConfirmDiscard(false); else requestClose() }}>
+    <div className="dialog-header"><h2 id="transfer-title">New transfer</h2><button type="button" className="icon-button" aria-label="Close transfer" onClick={requestClose} disabled={busy || confirmDiscard}>×</button></div>
+    {confirmDiscard && <div className="discard-confirmation" role="alertdialog" aria-modal="true" aria-labelledby="discard-title" aria-describedby="discard-description">
+      <h3 id="discard-title">Discard this transfer?</h3>
+      <p id="discard-description">Your transfer details will be cleared. No money will be sent.</p>
+      <div className="discard-actions"><button type="button" className="secondary-button" ref={keepEditingButton} onClick={() => setConfirmDiscard(false)}>Keep editing</button>
+        <button type="button" className="discard-button" onClick={onClose}>Discard</button></div>
+    </div>}
+    <div className="transfer-body" hidden={confirmDiscard}>
     {result ? <div className="success-panel" aria-live="polite">
       <h3 ref={heading} tabIndex={-1}>Transfer sent</h3><p className="success-amount amount">{formatMoney(result.amount)}</p>
       <p>to {result.recipient.name} · {result.recipient.bank} · {result.recipient.accountNumberMasked}</p>
@@ -181,10 +208,11 @@ export function TransferDialog({ accounts, customer, onClose }: Props) {
             {sendError && <div className="send-error" role="alert"><p>{sendError}</p>{Object.entries(errors).filter(([key]) => key !== 'root').length > 0 && <p>Go back to edit the highlighted fields.</p>}</div>}
           </>}
         </div>
-        <div className="dialog-footer"><button type="button" className="secondary-button" disabled={busy} onClick={() => { if (step === 0) onClose(); else { setSendError(''); setStep(step - 1) } }}>{step === 0 ? 'Cancel' : 'Back'}</button>
+        <div className="dialog-footer"><button type="button" className="secondary-button" disabled={busy} onClick={() => { if (step === 0) requestClose(); else { setSendError(''); setStep(step - 1) } }}>{step === 0 ? 'Cancel' : 'Back'}</button>
           <button type="submit" className="action-button" disabled={busy}>{busy ? 'Sending…' : step === 2 ? 'Confirm transfer' : 'Continue'}</button></div>
       </form>
     </>}
+    </div>
   </dialog>
 }
 

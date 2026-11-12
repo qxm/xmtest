@@ -13,3 +13,7 @@ The dialog uses native modal focus containment, returns focus to the opener, han
 Tests cover over-balance rejection without POST, duplicate-submit protection, dashboard refresh, new recipients, server validation, failed-send retry, refresh failure after success, amount boundaries, and note limits. jsdom stubs dialog open/close; real-browser smoke checks cover the native modal, success, focus return and Escape.
 
 Manual failure demo: enter `#fail` in Note, proceed to Review and confirm. The mock API returns an error without moving funds. Change the note to retry successfully. Reloading resets the in-memory mock data.
+
+## Draft closing
+
+Closing an unfinished transfer (X, Cancel or Escape) asks `Discard this transfer?`. `Keep editing` is initially focused, preserves form values and returns focus to the triggering control. Escape dismisses the confirmation and keeps editing. `Discard` unmounts the form; reopening starts fresh. A pristine form and a successful transfer close directly; sending still blocks closing. Search text alone is not treated as transfer data.
