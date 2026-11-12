@@ -3,9 +3,9 @@
 A single-page banking demo built with React 19, TypeScript, Vite, TanStack Query, React Hook Form and Zod. MSW supplies the same mock API in the browser and tests; no backend or login is required.
 
 - Repository: [qxm/xmtest](https://github.com/qxm/xmtest)
-- Public deployment: **not yet configured or verified**.
+- Public deployment: [xmtest-kappa.vercel.app](https://xmtest-kappa.vercel.app/). Browser smoke check confirmed customer, accounts, recent transactions and daily-limit usage load successfully. The project owner also verified a successful hosted transfer, failure with `#fail` followed by an edited-note retry, and reload with banking data reset.
 - Runtime: **Node 22**, specified in [.nvmrc](.nvmrc).
-- Latest local verification, 12 November 2026: **52 tests across 8 files**, lint, typecheck and production build passed. GitHub-hosted CI has not yet been verified.
+- Latest local verification, 12 November 2026: **52 tests across 8 files**, lint, typecheck and production build passed. The project owner confirmed that the latest GitHub Actions run passed.
 
 ## Run locally
 
@@ -161,23 +161,16 @@ Manual browser checks covered 360, 390, 640, 768, 1024 and 1280px widths, no pag
 
 ## CI and deployment
 
-The [CI workflow](.github/workflows/ci.yml) runs on push, pull request and manual dispatch using Ubuntu / Node 22. It installs locked dependencies, runs check/build and verifies the two required browser scripts are present in `dist/`. It requires no custom secrets. See [CI notes](docs/ci.md). The workflow is configured; a GitHub-hosted successful run still needs verification after pushing.
+The [CI workflow](.github/workflows/ci.yml) runs on push, pull request and manual dispatch using Ubuntu / Node 22. It installs locked dependencies, runs check/build and verifies the two required browser scripts are present in `dist/`. It requires no custom secrets. See [CI notes](docs/ci.md). The project owner confirmed that the latest GitHub-hosted CI run passed; see the [Actions history](https://github.com/qxm/xmtest/actions) for run details.
 
 For static hosting, use Node 22, build command `npm run build`, and output directory `dist`. MSW runs in the browser in the built app, so the optional Node mock server is unnecessary. See [DEPLOYMENT.md](DEPLOYMENT.md) for service-worker and hosting details.
 
-Before submission: deploy over HTTPS, verify a transfer and reload in a normal browser, record the public URL at the top of this README, and confirm the final repository version and CI run.
+Hosted transfer success, failure/retry, reload and the latest GitHub CI run have been confirmed by the project owner. Before submission, confirm these browser checks used a normal browser and push any final documentation changes.
 
-## AI use
-
-OpenAI Codex assisted with repository review, implementation planning, React/TypeScript code, test cases, browser verification and documentation. The implementation was revised during review rather than accepted unchanged. Concrete examples:
-
-1. The initial generated greeting and avatar used fixed Ava/AC text. They were changed to API-derived identity, and then to a time-based Singapore greeting at the project owner's request. A different-customer test guards against returning to hard-coded identity.
-2. The first skeleton implementation used separate placeholder boxes whose heights differed from loaded cards. It was replaced with shared components and matching text slots, then measured before/after loading at three widths.
-3. Native modal behavior alone briefly allowed focus to leave the dialog at a Tab boundary in the tested browser. Explicit boundary handling was added and tested in both directions, including while the draft-confirmation UI hides the form.
 
 ## Not done / known issues
 
-- No public deployment URL or verified GitHub-hosted CI run yet.
+- Hosted dashboard loading was checked in the in-app browser. The project owner confirmed transfer success, `#fail` failure with retained inputs, successful retry after editing, and page reload with seed balances restored. The browser used for those checks was not recorded. The project owner also confirmed that the latest GitHub Actions run passed.
 - Entity data resets on reload; transfers have no real backend, authentication or cross-session persistence. UI duplicate-submit prevention is not server-side idempotency.
 - No automated browser end-to-end suite. Native dialog behavior is checked manually; jsdom does not reproduce it fully.
 - Physical iOS/Android keyboards, device safe areas and screen-reader behavior have not been verified on actual devices. Responsive browser emulation is not a substitute for those checks.
