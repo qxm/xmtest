@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { accountsQuery, customerQuery, transactionsQuery } from '../../api/queries'
 import { formatMoney } from '../../lib/format'
+import { Greeting } from './Greeting'
 import { AccountCards } from './AccountCards'
 import { TransactionList } from './TransactionList'
 import { DashboardSkeleton } from './DashboardSkeleton'
@@ -27,7 +28,7 @@ export function DashboardShell() {
   const remaining = customer.data ? Math.max(0, customer.data.customer.dailyTransferLimit - customer.data.customer.transferredToday) : 0
 
   return <main id="main" className="dashboard" tabIndex={-1}>
-    <div className="greeting"><p className="eyebrow">YOUR OVERVIEW</p><h1>Good evening{customer.data?.customer.firstName ? `, ${customer.data.customer.firstName}` : ''}</h1><p>Your everyday banking, in one place.</p></div>
+    <div className="greeting"><p className="eyebrow">YOUR OVERVIEW</p><Greeting firstName={customer.data?.customer.firstName} /><p>Your everyday banking, in one place.</p></div>
     {failed ? <section className="panel dashboard-error" aria-labelledby="dashboard-error-title">
       <h2 id="dashboard-error-title" role="alert">We couldn't load your dashboard.</h2>
       <button className="action-button" type="button" onClick={retry} disabled={retrying}>{retrying ? 'Retrying…' : 'Retry'}</button>

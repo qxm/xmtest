@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { server } from './test/setup'
 import { formatMoney } from './lib/format'
 import App from './App'
+import { getGreeting } from './lib/greeting'
 
 function renderApp() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -19,9 +20,9 @@ describe('dashboard', () => {
       segment: 'retail', dailyTransferLimit: 5000, transferredToday: 0,
     } })))
     renderApp()
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Good evening')
-    expect(screen.queryByText('Good evening, Ava')).not.toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Good evening, Jamie' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(getGreeting())
+    expect(screen.queryByText(/Good (morning|afternoon|evening), Ava/)).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Good (morning|afternoon|evening), Jamie/ })).toBeInTheDocument()
     expect(screen.getByLabelText('Jamie Tan')).toHaveTextContent('JT')
   })
 
