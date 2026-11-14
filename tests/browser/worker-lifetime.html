@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Mock worker lifetime regression</title></head>
+<body>
+  <h1>Mock worker lifetime regression</h1>
+  <p>Local-only harness. This page is not an entry in the production build.</p>
+  <button id="transfer" disabled>Transfer 50</button>
+  <button id="sleep" disabled>Simulate inactive client</button>
+  <button id="raw" disabled>Raw API read</button>
+  <button id="safe" disabled>Protected API read</button>
+  <pre role="status" id="result">Starting…</pre>
+  <script type="module">
+    import { configureApiReadiness } from '/src/api/readiness.ts'
+    import { apiFetch } from '/src/api/client.ts'
+    import { ensureMockApiReady } from '/src/mocks/runtime.ts'
+    configureApiReadiness(ensureMockApiReady)
+    const output = document.querySelector('#result')
+    async function run(action) {
+      try { output.textContent = JSON.stringify(await action(), null, 2) }
+      catch (error) { output.textContent = error.message }
+    }
+    document.querySelector('#transfer').onclick = () => run(() => apiFetch('/api/transfers', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromAccountId: 'acc_checking', payeeId: 'pay_001', amount: 50 }),
+    }))
+    document.querySelector('#sleep').onclick = () => {
+      navigator.serviceWorker.controller.postMessage('CLIENT_CLOSED')
+      output.textContent = 'Client deactivated. Raw read should bypass mocking; protected read should restore it.'
+    }
+    document.querySelector('#raw').onclick = () => run(async () => {
+      const response = await fetch('/api/accounts')
+      return { status: response.status, type: response.headers.get('content-type'), body: (await response.text()).slice(0, 160) }
+    })
+    document.querySelector('#safe').onclick = () => run(() => apiFetch('/api/accounts'))
+    await run(() => apiFetch('/api/accounts'))
+    document.querySelectorAll('button').forEach(button => { button.disabled = false })
+  </script>
+</body>
+</html>

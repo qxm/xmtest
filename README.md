@@ -5,7 +5,7 @@ A single-page banking demo built with React 19, TypeScript, Vite, TanStack Query
 - Repository: [qxm/xmtest](https://github.com/qxm/xmtest)
 - Public deployment: [xmtest-kappa.vercel.app](https://xmtest-kappa.vercel.app/). Browser smoke check confirmed customer, accounts, recent transactions and daily-limit usage load successfully. The project owner also verified a successful hosted transfer, failure with `#fail` followed by an edited-note retry, and reload with banking data reset.
 - Runtime: **Node 22**, specified in [.nvmrc](.nvmrc).
-- Latest local verification, 12 November 2026: **52 tests across 8 files**, lint, typecheck and production build passed. The project owner confirmed that the latest GitHub Actions run passed.
+- Latest local verification, 13 November 2026: **62 tests across 9 files**, lint, typecheck and production build passed. The project owner confirmed that the latest GitHub Actions run passed.
 
 ## Run locally
 
@@ -31,7 +31,7 @@ In Windows PowerShell, use `npm.cmd` in place of `npm` if PowerShell selects a b
 
 Vite and Vitest scripts select `--configLoader runner` directly. This avoids configuration bundling through esbuild, which encountered parent-directory permissions in the Windows development environment. No extra CLI flag is needed.
 
-MSW starts before React renders and remains enabled in production. Serve the app on localhost or HTTPS so the service worker can register. Mock balances, transfers and transactions live in memory: **reloading the page resets banking data**. Theme and brand choices persist in localStorage when available.
+MSW starts before React renders and remains enabled in production. Each API call also awaits a shared activation handshake, so a worker that lost its client state after a suspended tab can be reactivated before requests are sent. Serve the app on localhost or HTTPS so the service worker can register. Mock balances, transfers and transactions live in memory: **reloading the page resets banking data**. Theme and brand choices persist in localStorage when available.
 
 ## Features and scope
 
@@ -78,6 +78,8 @@ The original [brief](brief/candidate-brief.md), [API contract](brief/api-contrac
 **Search.** The dashboard filters only the eight loaded recent transactions in the browser. This keeps typing immediate and avoids extra requests. It is not a search across the customer's entire transaction history.
 
 **Forms.** One React Hook Form instance spans all steps, with `shouldUnregister: false` to retain values when stepping back. A Zod schema is used for blur validation, Continue and final submission. It reads current balances, remaining limit and valid payee IDs. Amount stays a string until serialization, allowing validation of decimal places before conversion. Account numbers remain strings to preserve leading zeroes. API field errors are mapped back to the matching form fields.
+
+**Long-lived tabs.** MSW keeps active client IDs in service-worker memory, which can be lost when a browser suspends/restarts the worker. Retry previously only repeated fetch and could reach the static host instead of the mock API. `src/mocks/readiness.ts` now gates API calls on an acknowledged activation, shares concurrent preparation, rebinds changed controllers and bounds startup/activation waits. It does not reload the page, reset handlers or replay a transfer POST. Non-JSON API responses are rejected explicitly. The adapter uses the locked MSW 2.x worker message protocol and should be reviewed when upgrading MSW. A deterministic local-browser reproduction is documented in [tests/browser](tests/browser/README.md); this is not an overnight soak-test result.
 
 **Sending and refreshing.** Only Confirm sends the POST. A synchronous submission guard and disabled controls prevent duplicate interaction; closing is blocked while sending. After a successful response, the account and customer caches use the returned authoritative values, then banking queries refresh. A refresh error is kept separate from a sending error and offers GET refresh rather than resending money. Background transaction refresh can finish shortly after returning to the dashboard.
 
@@ -154,8 +156,9 @@ Coverage includes:
 - Modal focus boundaries, draft retention/discard, Escape, focus restoration and empty payee selection.
 - Four theme combinations, persistence, storage failure and customer defaults that do not overwrite a user's choice.
 - Daily limit progress at empty, partial, full and zero limits.
+- Worker activation loss/recovery, shared readiness, controller changes, startup timeouts, cancellation, HTML fallbacks and no automatic POST replay.
 
-Latest local result: **52 tests in 8 files passed**, along with `npm run check`, `npm run build` and `git diff --check`.
+Latest local result: **62 tests in 9 files passed**, along with `npm run check`, `npm run build` and `git diff --check`.
 
 Manual browser checks covered 360, 390, 640, 768, 1024 and 1280px widths, no page-level horizontal overflow, the mobile CTA, all four theme/brand combinations, keyboard selection/focus, complete mock transfers and discard confirmation. Major text/button/status color pairs were checked at more than 4.5:1 contrast; this is not a full accessibility certification.
 
@@ -169,6 +172,8 @@ Hosted transfer success, failure/retry, reload and the latest GitHub CI run have
 
 
 ## Not done / known issues
+
+- The long-lived-tab recovery fix was verified locally and needs a new deployment before existing hosted tabs can use it. An already-open old tab must reload once to load the updated JavaScript. Overnight suspension testing remains outstanding.
 
 - Hosted dashboard loading was checked in the in-app browser. The project owner confirmed transfer success, `#fail` failure with retained inputs, successful retry after editing, and page reload with seed balances restored. The browser used for those checks was not recorded. The project owner also confirmed that the latest GitHub Actions run passed.
 - Entity data resets on reload; transfers have no real backend, authentication or cross-session persistence. UI duplicate-submit prevention is not server-side idempotency.

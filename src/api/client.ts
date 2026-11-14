@@ -1,3 +1,4 @@
+import { waitForApi } from './readiness'
 import type { ApiErrorBody } from './types'
 
 /**
@@ -15,12 +16,12 @@ export class ApiError extends Error {
   readonly meta?: Record<string, unknown>
 
   constructor(status: number, body: ApiErrorBody | null) {
-    super(body?.error.message ?? `Request failed (${status})`)
+    super(body?.error?.message ?? `Request failed (${status})`)
     this.name = 'ApiError'
     this.status = status
-    this.code = body?.error.code ?? 'UNKNOWN'
-    this.fields = body?.error.fields
-    this.meta = body?.error.meta
+    this.code = body?.error?.code ?? 'UNKNOWN'
+    this.fields = body?.error?.fields
+    this.meta = body?.error?.meta
   }
 }
 
@@ -29,6 +30,7 @@ export async function apiFetch<T>(
   init?: RequestInit,
 ): Promise<T> {
   const url = `${BASE_URL}${path.replace(/^\//, '')}`
+  await waitForApi(init?.signal)
   const response = await fetch(url, init)
   const body = (await response.json().catch(() => null)) as
     | T
@@ -39,5 +41,11 @@ export async function apiFetch<T>(
     throw new ApiError(response.status, body as ApiErrorBody | null)
   }
 
+  if (!response.headers.get('content-type')?.includes('json') || body === null) {
+    throw new ApiError(response.status, { error: {
+      code: 'INVALID_API_RESPONSE',
+      message: 'The API returned an unexpected response. Please retry.',
+    } })
+  }
   return body as T
 }
